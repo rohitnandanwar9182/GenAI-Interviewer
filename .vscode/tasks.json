@@ -1,0 +1,49 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Backend: npm install",
+      "type": "shell",
+      "command": "npm install",
+      "options": { "cwd": "${workspaceFolder}/Backend" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Frontend: npm install",
+      "type": "shell",
+      "command": "npm install",
+      "options": { "cwd": "${workspaceFolder}/Frontend" },
+      "problemMatcher": []
+    },
+    {
+      "label": "Install All",
+      "dependsOn": ["Backend: npm install", "Frontend: npm install"],
+      "dependsOrder": "parallel",
+      "problemMatcher": []
+    },
+    {
+      "label": "Backend: dev server",
+      "type": "shell",
+      "command": "npm run dev",
+      "options": { "cwd": "${workspaceFolder}/Backend" },
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": { "panel": "dedicated", "group": "servers" }
+    },
+    {
+      "label": "Frontend: dev server",
+      "type": "shell",
+      "command": "npm run dev",
+      "options": { "cwd": "${workspaceFolder}/Frontend" },
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": { "panel": "dedicated", "group": "servers" }
+    },
+    {
+      "label": "Run All (Backend + Frontend)",
+      "dependsOn": ["Backend: dev server", "Frontend: dev server"],
+      "dependsOrder": "parallel",
+      "problemMatcher": []
+    }
+  ]
+}
