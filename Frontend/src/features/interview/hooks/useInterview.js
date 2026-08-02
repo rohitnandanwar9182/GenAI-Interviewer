@@ -60,43 +60,35 @@ export const useInterview = () => {
     }
 
 
-  const getResumePdf = async (interviewReportId) => {
+    const getResumePdf = async (interviewReportId) => {
     setLoading(true)
 
     // Open the tab immediately, while we still have the original tap's
-    // "trusted user gesture" credit — mobile browsers block window.open
-    // calls made after an `await`, which silently breaks downloads on phones.
+    // "trusted user gesture" — mobile browsers block window.open/downloads
+    // triggered after an `await`, which is why this silently failed on phones.
     const newTab = window.open("", "_blank")
 
     let response = null
     try {
         response = await generateResumePdf({ interviewReportId })
         const blob = new Blob([ response ], { type: "application/pdf" })
-
-        // Convert to a data: URI instead of a blob: object URL — blob URLs
-        // are tied to the document that created them and don't reliably
-        // transfer to a separate tab on some Android browsers (Samsung
-        // Internet included). A data: URI is a plain self-contained string
-        // with no such cross-window dependency.
-        const dataUrl = await new Promise((resolve, reject) => {
-            const reader = new FileReader()
-            reader.onloadend = () => resolve(reader.result)
-            reader.onerror = reject
-            reader.readAsDataURL(blob)
-        })
+        const url = window.URL.createObjectURL(blob)
 
         if (newTab) {
-            newTab.location.href = dataUrl
+            // Works on desktop and most mobile browsers (Android Chrome
+            // downloads it directly; iOS Safari opens it with a Share/Save option).
+            newTab.location.href = url
         } else {
-            // Popup was blocked — fall back to the anchor-download trick
-            // in the current tab, which still works on desktop browsers.
+            // Popup was blocked — fall back to the old anchor-download trick.
             const link = document.createElement("a")
-            link.href = dataUrl
+            link.href = url
             link.setAttribute("download", `resume_${interviewReportId}.pdf`)
             document.body.appendChild(link)
             link.click()
             document.body.removeChild(link)
         }
+
+        setTimeout(() => window.URL.revokeObjectURL(url), 60000)
     }
     catch (error) {
         console.log(error)
@@ -105,6 +97,7 @@ export const useInterview = () => {
         setLoading(false)
     }
 }
+
 
 
     // const getResumePdf = async (interviewReportId) => {
