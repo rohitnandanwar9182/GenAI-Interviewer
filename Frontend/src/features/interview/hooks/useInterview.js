@@ -59,24 +59,65 @@ export const useInterview = () => {
         return response.interviewReports
     }
 
+
     const getResumePdf = async (interviewReportId) => {
-        setLoading(true)
-        let response = null
-        try {
-            response = await generateResumePdf({ interviewReportId })
-            const url = window.URL.createObjectURL(new Blob([ response ], { type: "application/pdf" }))
+    setLoading(true)
+
+    // Open the tab immediately, while we still have the original tap's
+    // "trusted user gesture" — mobile browsers block window.open/downloads
+    // triggered after an `await`, which is why this silently failed on phones.
+    const newTab = window.open("", "_blank")
+
+    let response = null
+    try {
+        response = await generateResumePdf({ interviewReportId })
+        const blob = new Blob([ response ], { type: "application/pdf" })
+        const url = window.URL.createObjectURL(blob)
+
+        if (newTab) {
+            // Works on desktop and most mobile browsers (Android Chrome
+            // downloads it directly; iOS Safari opens it with a Share/Save option).
+            newTab.location.href = url
+        } else {
+            // Popup was blocked — fall back to the old anchor-download trick.
             const link = document.createElement("a")
             link.href = url
             link.setAttribute("download", `resume_${interviewReportId}.pdf`)
             document.body.appendChild(link)
             link.click()
+            document.body.removeChild(link)
         }
-        catch (error) {
-            console.log(error)
-        } finally {
-            setLoading(false)
-        }
+
+        setTimeout(() => window.URL.revokeObjectURL(url), 60000)
     }
+    catch (error) {
+        console.log(error)
+        if (newTab) newTab.close()
+    } finally {
+        setLoading(false)
+    }
+}
+
+
+
+    // const getResumePdf = async (interviewReportId) => {
+    //     setLoading(true)
+    //     let response = null
+    //     try {
+    //         response = await generateResumePdf({ interviewReportId })
+    //         const url = window.URL.createObjectURL(new Blob([ response ], { type: "application/pdf" }))
+    //         const link = document.createElement("a")
+    //         link.href = url
+    //         link.setAttribute("download", `resume_${interviewReportId}.pdf`)
+    //         document.body.appendChild(link)
+    //         link.click()
+    //     }
+    //     catch (error) {
+    //         console.log(error)
+    //     } finally {
+    //         setLoading(false)
+    //     }
+    // }
 
     useEffect(() => {
         if (interviewId) {
