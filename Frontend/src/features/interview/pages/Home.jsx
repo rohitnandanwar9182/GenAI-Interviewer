@@ -4,17 +4,24 @@ import { useInterview } from '../hooks/useInterview.js'
 import { useNavigate } from 'react-router'
 
 const Home = () => {
-
-    const { loading, generateReport,reports } = useInterview()
+const { loading, generateReport,reports } = useInterview()
     const [ jobDescription, setJobDescription ] = useState("")
     const [ selfDescription, setSelfDescription ] = useState("")
+    const [ errorMessage, setErrorMessage ] = useState("")
     const resumeInputRef = useRef()
 
     const navigate = useNavigate()
 
     const handleGenerateReport = async () => {
+        setErrorMessage("")
         const resumeFile = resumeInputRef.current.files[ 0 ]
         const data = await generateReport({ jobDescription, selfDescription, resumeFile })
+
+        if (!data) {
+            setErrorMessage("Couldn't generate your interview strategy right now. This usually means the AI service is temporarily busy or its usage limit was reached — please wait a minute and try again.")
+            return
+        }
+
         navigate(`/interview/${data._id}`)
     }
 
@@ -109,6 +116,19 @@ const Home = () => {
                         </div>
                     </div>
                 </div>
+
+
+
+
+
+
+         //chnage
+               {/* Error Message */}
+                {errorMessage && (
+                    <div className='info-box' style={{ margin: '0 1.5rem 1rem', borderColor: '#d20d3b', backgroundColor: 'rgba(210, 13, 59, 0.08)' }}>
+                        <p style={{ color: '#ff8fa3' }}>{errorMessage}</p>
+                    </div>
+                )}
 
                 {/* Card Footer */}
                 <div className='interview-card__footer'>
