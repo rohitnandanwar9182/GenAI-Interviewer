@@ -39,4 +39,15 @@ app.use("/api/interview", interviewRouter)
 
 
 
+// Global error handler — without this, failures return with no useful
+// message, which is why this exact 400 has been impossible to diagnose
+// from the browser alone. Now the real reason will show up in both the
+// Network tab response body AND the Render logs.
+app.use((err, req, res, next) => {
+    console.error("Unhandled error:", err)
+    res.status(err.status || err.statusCode || 500).json({
+        message: err.message || "Something went wrong on the server."
+    })
+})
+
 module.exports = app

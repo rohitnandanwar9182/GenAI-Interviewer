@@ -57,7 +57,6 @@ async function generateInterviewReport({ resume, selfDescription, jobDescription
 }
 
 
-
 async function generatePdfFromHtml(htmlContent) {
     let browser = null
 
@@ -83,13 +82,9 @@ async function generatePdfFromHtml(htmlContent) {
         return pdfBuffer
 
     } finally {
-        // Always close, even if setContent/pdf throws above — otherwise a
-        // failed attempt leaves Chrome running in memory forever, and a few
-        // of those will crash the whole server (which is what a 503 here means).
         if (browser) await browser.close()
     }
 }
-
 
 
 async function generateResumePdf({ resume, selfDescription, jobDescription }) {
@@ -112,7 +107,7 @@ async function generateResumePdf({ resume, selfDescription, jobDescription }) {
                     `
 
     const response = await ai.models.generateContent({
-        model: "Gemini 2.5 Flash",
+        model: "gemini-3.1-flash-lite",
         contents: prompt,
         config: {
             responseMimeType: "application/json",
