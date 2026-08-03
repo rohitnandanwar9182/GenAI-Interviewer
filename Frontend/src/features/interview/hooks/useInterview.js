@@ -79,50 +79,43 @@ export const useInterview = () => {
 
 
   const getResumePdf = async (interviewReportId) => {
-    setLoading(true)
+        setLoading(true)
 
-    // Open the tab immediately, while we still have the original tap's
-    // "trusted user gesture" credit — mobile browsers block window.open
-    // calls made after an `await`, which silently breaks downloads on phones.
-    const newTab = window.open("", "_blank")
+        // Open the tab immediately, while we still have the original tap's
+        // "trusted user gesture" credit — mobile browsers block window.open
+        // calls made after an `await`, which silently breaks downloads on phones.
+        const newTab = window.open("", "_blank")
 
-    let response = null
-    try {
-        response = await generateResumePdf({ interviewReportId })
-        const blob = new Blob([ response ], { type: "application/pdf" })
+        let response = null
+        try {
+            response = await generateResumePdf({ interviewReportId })
+            const blob = new Blob([ response ], { type: "application/pdf" })
+            const url = window.URL.createObjectURL(blob)
 
-        // Convert to a data: URI instead of a blob: object URL — blob URLs
-        // are tied to the document that created them and don't reliably
-        // transfer to a separate tab on some Android browsers (Samsung
-        // Internet included). A data: URI is a plain self-contained string
-        // with no such cross-window dependency.
-        const dataUrl = await new Promise((resolve, reject) => {
-            const reader = new FileReader()
-            reader.onloadend = () => resolve(reader.result)
-            reader.onerror = reject
-            reader.readAsDataURL(blob)
-        })
+            if (newTab) {
+                // NOTE: must be a blob: URL, not a data: URI — Chrome and all
+                // Chromium-based browsers (Samsung Internet included) silently
+                // block top-level navigation to data: URLs as an anti-phishing
+                // measure. That's what caused the permanently-blank tab.
+                newTab.location.href = url
+            } else {
+                const link = document.createElement("a")
+                link.href = url
+                link.setAttribute("download", `resume_${interviewReportId}.pdf`)
+                document.body.appendChild(link)
+                link.click()
+                document.body.removeChild(link)
+            }
 
-        if (newTab) {
-            newTab.location.href = dataUrl
-        } else {
-            // Popup was blocked — fall back to the anchor-download trick
-            // in the current tab, which still works on desktop browsers.
-            const link = document.createElement("a")
-            link.href = dataUrl
-            link.setAttribute("download", `resume_${interviewReportId}.pdf`)
-            document.body.appendChild(link)
-            link.click()
-            document.body.removeChild(link)
+            setTimeout(() => window.URL.revokeObjectURL(url), 60000)
+        }
+        catch (error) {
+            console.log(error)
+            if (newTab) newTab.close()
+        } finally {
+            setLoading(false)
         }
     }
-    catch (error) {
-        console.log(error)
-        if (newTab) newTab.close()
-    } finally {
-        setLoading(false)
-    }
-}
 
 
     // const getResumePdf = async (interviewReportId) => {

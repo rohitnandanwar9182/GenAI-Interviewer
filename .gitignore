@@ -16,3 +16,6 @@ npm-debug.log*
 
 Backend.zip
 *.zip
+
+
+"`n*.zip`n*.tar`n*.rar`n*.7z"
