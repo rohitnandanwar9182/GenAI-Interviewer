@@ -59,27 +59,38 @@ async function generateInterviewReport({ resume, selfDescription, jobDescription
 
 
 async function generatePdfFromHtml(htmlContent) {
-    const browser = await puppeteer.launch({
-        args: chromium.args,
-        executablePath: await chromium.executablePath(),
-        headless: chromium.headless,
-    })
-    const page = await browser.newPage();
-    await page.setContent(htmlContent, { waitUntil: "networkidle0" })
+    let browser = null
 
-    const pdfBuffer = await page.pdf({
-        format: "A4", margin: {
-            top: "20mm",
-            bottom: "20mm",
-            left: "15mm",
-            right: "15mm"
-        }
-    })
+    try {
+        browser = await puppeteer.launch({
+            args: chromium.args,
+            executablePath: await chromium.executablePath(),
+            headless: chromium.headless,
+        })
 
-    await browser.close()
+        const page = await browser.newPage()
+        await page.setContent(htmlContent, { waitUntil: "networkidle0", timeout: 20000 })
 
-    return pdfBuffer
+        const pdfBuffer = await page.pdf({
+            format: "A4", margin: {
+                top: "20mm",
+                bottom: "20mm",
+                left: "15mm",
+                right: "15mm"
+            }
+        })
+
+        return pdfBuffer
+
+    } finally {
+        // Always close, even if setContent/pdf throws above — otherwise a
+        // failed attempt leaves Chrome running in memory forever, and a few
+        // of those will crash the whole server (which is what a 503 here means).
+        if (browser) await browser.close()
+    }
 }
+
+
 
 async function generateResumePdf({ resume, selfDescription, jobDescription }) {
 
