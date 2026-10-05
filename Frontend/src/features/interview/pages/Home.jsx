@@ -15,14 +15,38 @@ const { loading, generateReport,reports } = useInterview()
     const handleGenerateReport = async () => {
         setErrorMessage("")
         const resumeFile = resumeInputRef.current.files[ 0 ]
-        const data = await generateReport({ jobDescription, selfDescription, resumeFile })
 
-        if (!data) {
-            setErrorMessage("Couldn't generate your interview strategy right now. This usually means the AI service is temporarily busy or its usage limit was reached — please wait a minute and try again.")
+        if (!jobDescription.trim()) {
+            setErrorMessage("Please enter the target job description.")
             return
         }
 
-        navigate(`/interview/${data._id}`)
+        if (!resumeFile && !selfDescription.trim()) {
+            setErrorMessage("Please upload a PDF resume or enter a self-description.")
+            return
+        }
+
+        if (resumeFile && !resumeFile.name.toLowerCase().endsWith(".pdf")) {
+            setErrorMessage("Please upload your resume as a PDF.")
+            return
+        }
+
+        if (resumeFile && resumeFile.size > 3 * 1024 * 1024) {
+            setErrorMessage("Your PDF must be 3 MB or smaller.")
+            return
+        }
+
+        try {
+            const data = await generateReport({ jobDescription, selfDescription, resumeFile })
+            navigate(`/interview/${data._id}`)
+        } catch (error) {
+            console.error("Interview report generation failed:", error)
+            setErrorMessage(
+                error.response?.data?.message ||
+                "Couldn't generate your interview strategy. Please try again; if the problem continues, check the backend deployment logs."
+            )
+            return
+        }
     }
 
     if (loading) {
@@ -87,8 +111,8 @@ const { loading, generateReport,reports } = useInterview()
                                     <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 16 12 12 8 16" /><line x1="12" y1="12" x2="12" y2="21" /><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3" /></svg>
                                 </span>
                                 <p className='dropzone__title'>Click to upload or drag &amp; drop</p>
-                                <p className='dropzone__subtitle'>PDF or DOCX (Max 5MB)</p>
-                                <input ref={resumeInputRef} hidden type='file' id='resume' name='resume' accept='.pdf,.docx' />
+                                <p className='dropzone__subtitle'>PDF only (Max 3MB)</p>
+                                <input ref={resumeInputRef} hidden type='file' id='resume' name='resume' accept='.pdf,application/pdf' />
                             </label>
                         </div>
 

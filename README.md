@@ -69,9 +69,12 @@ JWT_SECRET=some-long-random-string
 GOOGLE_GENAI_API_KEY=your-gemini-api-key
 ```
 
-The frontend needs no `.env` — it's hardcoded to call the backend at `http://localhost:3000`
-(see `Frontend/src/features/*/services/*.api.js`). If you change the backend port, update
-those two files too.
+For local development, the frontend defaults to `http://localhost:3000`. For production,
+set `VITE_API_URL` in the Vercel project to the deployed backend's HTTPS origin
+(for example, `https://your-backend.onrender.com`) and redeploy; Vite embeds this value
+when it builds the frontend. The backend host must also have `MONGO_URI`, `JWT_SECRET`,
+and `GOOGLE_GENAI_API_KEY` configured as environment variables. Do not commit `.env`
+files or API keys.
 
 ## 5. Run it
 
