@@ -1,8 +1,9 @@
 # Interview AI
 
-An AI-powered interview prep tool. Upload your resume + a job description, and it generates
-a match score, likely technical/behavioral questions (with model answers), skill gaps, a
-day-by-day prep plan, and a tailored resume PDF — using Google's Gemini API.
+An AI-powered interview prep tool. Upload your resume and provide a job description, a
+self-description, or both. It generates a match score, likely technical/behavioral questions
+(with model answers), skill gaps, a day-by-day prep plan, and a tailored resume PDF — using
+Google's Gemini API.
 
 - **Backend**: Node.js, Express 5, MongoDB/Mongoose, JWT auth, Puppeteer (PDF generation)
 - **Frontend**: React 19, Vite, React Router, Sass
@@ -148,7 +149,7 @@ interview-ai-yt-main/
 | POST   | `/api/auth/login`                        | –    | Log in                                |
 | GET    | `/api/auth/logout`                       | ✔    | Log out (blacklists token)            |
 | GET    | `/api/auth/get-me`                       | ✔    | Current user                          |
-| POST   | `/api/interview` (multipart, field `resume`) | ✔ | Generate interview report from resume PDF + job description |
+| POST   | `/api/interview` (multipart, field `resume`) | ✔ | Generate a report from a required resume PDF and a job description, self-description, or both |
 | GET    | `/api/interview`                         | ✔    | List your reports                     |
 | GET    | `/api/interview/report/:interviewId`     | ✔    | Get one report                        |
 | POST   | `/api/interview/resume/pdf/:interviewReportId` | ✔ | Generate a tailored resume PDF |

@@ -12,39 +12,40 @@ async function generateInterViewReportController(req, res) {
 
     const { selfDescription, jobDescription } = req.body
 
-    if (typeof jobDescription !== "string" || !jobDescription.trim()) {
+    if (!req.file) {
         return res.status(400).json({
-            message: "A job description is required."
+            message: "Upload a PDF resume."
         })
     }
 
-    if (!req.file && (typeof selfDescription !== "string" || !selfDescription.trim())) {
+    if (
+        (typeof jobDescription !== "string" || !jobDescription.trim()) &&
+        (typeof selfDescription !== "string" || !selfDescription.trim())
+    ) {
         return res.status(400).json({
-            message: "Upload a PDF resume or provide a self-description."
+            message: "Provide a job description, a self-description, or both."
         })
     }
 
-    if (req.file && !req.file.originalname.toLowerCase().endsWith(".pdf")) {
+    if (!req.file.originalname.toLowerCase().endsWith(".pdf")) {
         return res.status(400).json({
             message: "Resume uploads must be PDF files."
         })
     }
 
-    const resumeContent = req.file
-        ? await (new pdfParse.PDFParse(Uint8Array.from(req.file.buffer))).getText()
-        : { text: "" }
+    const resumeContent = await (new pdfParse.PDFParse(Uint8Array.from(req.file.buffer))).getText()
 
     const interViewReportByAi = await generateInterviewReport({
         resume: resumeContent.text,
         selfDescription: typeof selfDescription === "string" ? selfDescription.trim() : "",
-        jobDescription: jobDescription.trim()
+        jobDescription: typeof jobDescription === "string" ? jobDescription.trim() : ""
     })
 
     const interviewReport = await interviewReportModel.create({
         user: req.user.id,
         resume: resumeContent.text,
-        selfDescription,
-        jobDescription,
+        selfDescription: typeof selfDescription === "string" ? selfDescription.trim() : "",
+        jobDescription: typeof jobDescription === "string" ? jobDescription.trim() : "",
         ...interViewReportByAi
     })
 
@@ -96,7 +97,10 @@ async function getAllInterviewReportsController(req, res) {
 async function generateResumePdfController(req, res) {
     const { interviewReportId } = req.params
 
-    const interviewReport = await interviewReportModel.findById(interviewReportId)
+    const interviewReport = await interviewReportModel.findOne({
+        _id: interviewReportId,
+        user: req.user.id
+    })
 
     if (!interviewReport) {
         return res.status(404).json({

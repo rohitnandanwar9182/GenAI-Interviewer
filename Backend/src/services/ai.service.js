@@ -36,10 +36,10 @@ const interviewReportSchema = z.object({
 async function generateInterviewReport({ resume, selfDescription, jobDescription }) {
 
 
-    const prompt = `Generate an interview report for a candidate with the following details:
-                        Resume: ${resume}
-                        Self Description: ${selfDescription}
-                        Job Description: ${jobDescription}
+    const prompt = `Generate an interview report for a candidate using all supplied information.
+                        Resume: ${resume || "(provided resume contains no extractable text)"}
+                        Self Description: ${selfDescription || "(not provided)"}
+                        Job Description: ${jobDescription || "(not provided; infer the target role from the resume and self-description)"}
 `
 
     const response = await ai.models.generateContent({
@@ -58,6 +58,10 @@ async function generateInterviewReport({ resume, selfDescription, jobDescription
 
 
 async function generatePdfFromHtml(htmlContent) {
+    if (typeof htmlContent !== "string" || !htmlContent.trim()) {
+        throw new Error("The AI service returned empty resume HTML.")
+    }
+
     let browser = null
 
     try {
@@ -68,10 +72,12 @@ async function generatePdfFromHtml(htmlContent) {
         })
 
         const page = await browser.newPage()
-        await page.setContent(htmlContent, { waitUntil: "networkidle0", timeout: 20000 })
+        await page.setContent(htmlContent, { waitUntil: "domcontentloaded", timeout: 20000 })
 
         const pdfBuffer = await page.pdf({
-            format: "A4", margin: {
+            format: "A4",
+            printBackground: true,
+            margin: {
                 top: "20mm",
                 bottom: "20mm",
                 left: "15mm",
@@ -79,7 +85,11 @@ async function generatePdfFromHtml(htmlContent) {
             }
         })
 
-        return pdfBuffer
+        if (!pdfBuffer.length) {
+            throw new Error("PDF generation returned an empty document.")
+        }
+
+        return Buffer.from(pdfBuffer)
 
     } finally {
         if (browser) await browser.close()
@@ -93,10 +103,10 @@ async function generateResumePdf({ resume, selfDescription, jobDescription }) {
         html: z.string().describe("The HTML content of the resume which can be converted to PDF using any library like puppeteer")
     })
 
-    const prompt = `Generate resume for a candidate with the following details:
-                        Resume: ${resume}
-                        Self Description: ${selfDescription}
-                        Job Description: ${jobDescription}
+    const prompt = `Generate a tailored resume using the candidate's supplied information:
+                        Resume: ${resume || "(not provided)"}
+                        Self Description: ${selfDescription || "(not provided)"}
+                        Job Description: ${jobDescription || "(not provided; tailor the resume based on the candidate's resume and self-description)"}
 
                         the response should be a JSON object with a single field "html" which contains the HTML content of the resume which can be converted to PDF using any library like puppeteer.
                         The resume should be tailored for the given job description and should highlight the candidate's strengths and relevant experience. The HTML content should be well-formatted and structured, making it easy to read and visually appealing.
@@ -116,9 +126,19 @@ async function generateResumePdf({ resume, selfDescription, jobDescription }) {
     })
 
 
-    const jsonContent = JSON.parse(response.text)
+    if (!response.text) {
+        throw new Error("The AI service returned an empty resume response.")
+    }
 
-    const pdfBuffer = await generatePdfFromHtml(jsonContent.html)
+    let parsedContent
+    try {
+        parsedContent = JSON.parse(response.text)
+    } catch {
+        throw new Error("The AI service returned invalid JSON for the resume.")
+    }
+
+    const { html } = resumePdfSchema.parse(parsedContent)
+    const pdfBuffer = await generatePdfFromHtml(html)
 
     return pdfBuffer
 

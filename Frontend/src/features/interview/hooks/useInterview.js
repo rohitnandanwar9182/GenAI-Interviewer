@@ -1,5 +1,5 @@
 import { getAllInterviewReports, generateInterviewReport, getInterviewReportById, generateResumePdf } from "../services/interview.api"
-import { useContext, useEffect } from "react"
+import { useCallback, useContext, useEffect } from "react"
 import { InterviewContext } from "../interview.context"
 import { useParams } from "react-router"
 
@@ -30,7 +30,7 @@ export const useInterview = () => {
 
 
 
-    const getReportById = async (interviewId) => {
+    const getReportById = useCallback(async (interviewId) => {
         setLoading(true)
         let response = null
         try {
@@ -46,15 +46,14 @@ export const useInterview = () => {
 
         //chnages
        return response ? response.interviewReport : null
-    }
+    }, [ setLoading, setReport ])
 
-   
-    const getReports = async () => {
+    const getReports = useCallback(async () => {
         setLoading(true)
         let response = null
         try {
             response = await getAllInterviewReports()
-            setReports(response.interviewReports)
+            setReports(Array.isArray(response?.interviewReports) ? response.interviewReports : [])
         } catch (error) {
             console.log(error)
         } finally {
@@ -65,68 +64,47 @@ export const useInterview = () => {
 
         
 
-       return response ? response.interviewReports : []
-    }
+       return Array.isArray(response?.interviewReports) ? response.interviewReports : []
+    }, [ setLoading, setReports ])
 
-
-  const getResumePdf = async (interviewReportId) => {
+    const getResumePdf = async (interviewReportId) => {
         setLoading(true)
-
-        // Open the tab immediately, while we still have the original tap's
-        // "trusted user gesture" credit — mobile browsers block window.open
-        // calls made after an `await`, which silently breaks downloads on phones.
-        const newTab = window.open("", "_blank")
-
-        let response = null
         try {
-            response = await generateResumePdf({ interviewReportId })
-            const blob = new Blob([ response ], { type: "application/pdf" })
-            const url = window.URL.createObjectURL(blob)
-
-            if (newTab) {
-                // NOTE: must be a blob: URL, not a data: URI — Chrome and all
-                // Chromium-based browsers (Samsung Internet included) silently
-                // block top-level navigation to data: URLs as an anti-phishing
-                // measure. That's what caused the permanently-blank tab.
-                newTab.location.href = url
-            } else {
-                const link = document.createElement("a")
-                link.href = url
-                link.setAttribute("download", `resume_${interviewReportId}.pdf`)
-                document.body.appendChild(link)
-                link.click()
-                document.body.removeChild(link)
+            const blob = await generateResumePdf({ interviewReportId })
+            if (!(blob instanceof Blob) || blob.size === 0) {
+                throw new Error("The server returned an empty resume PDF.")
             }
 
-            setTimeout(() => window.URL.revokeObjectURL(url), 60000)
-        }
-        catch (error) {
-            console.log(error)
-            if (newTab) newTab.close()
+            const signature = await blob.slice(0, 5).text()
+            if (signature !== "%PDF-") {
+                throw new Error("The server response was not a valid PDF.")
+            }
+
+            const url = window.URL.createObjectURL(blob)
+            const link = document.createElement("a")
+            link.href = url
+            link.download = `resume_${interviewReportId}.pdf`
+            document.body.appendChild(link)
+            link.click()
+            link.remove()
+            window.setTimeout(() => window.URL.revokeObjectURL(url), 60000)
+        } catch (error) {
+            const responseData = error.response?.data
+            if (responseData instanceof Blob) {
+                const responseText = await responseData.text()
+                let message = responseText
+                try {
+                    message = JSON.parse(responseText).message || responseText
+                } catch {
+                    // Keep the raw response text when the server did not return JSON.
+                }
+                throw new Error(message || "Resume PDF generation failed.")
+            }
+            throw error
         } finally {
             setLoading(false)
         }
     }
-
-
-    // const getResumePdf = async (interviewReportId) => {
-    //     setLoading(true)
-    //     let response = null
-    //     try {
-    //         response = await generateResumePdf({ interviewReportId })
-    //         const url = window.URL.createObjectURL(new Blob([ response ], { type: "application/pdf" }))
-    //         const link = document.createElement("a")
-    //         link.href = url
-    //         link.setAttribute("download", `resume_${interviewReportId}.pdf`)
-    //         document.body.appendChild(link)
-    //         link.click()
-    //     }
-    //     catch (error) {
-    //         console.log(error)
-    //     } finally {
-    //         setLoading(false)
-    //     }
-    // }
 
     useEffect(() => {
         if (interviewId) {
@@ -134,7 +112,7 @@ export const useInterview = () => {
         } else {
             getReports()
         }
-    }, [ interviewId ])
+    }, [ interviewId, getReportById, getReports ])
 
     return { loading, report, reports, generateReport, getReportById, getReports, getResumePdf }
 
