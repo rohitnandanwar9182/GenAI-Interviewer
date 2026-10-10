@@ -11,9 +11,9 @@ services:
         value: production
       - key: FRONTEND_URL
         fromService:
-          type: static
+          type: web
           name: genai-interviewer-frontend
-          property: url
+          property: host
       - key: MONGO_URI
         sync: false
       - key: JWT_SECRET
@@ -32,7 +32,7 @@ services:
         fromService:
           type: web
           name: genai-interviewer-backend
-          property: url
+          property: host
     routes:
       - type: rewrite
         source: /*

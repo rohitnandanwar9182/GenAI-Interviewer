@@ -17,8 +17,11 @@ app.use(express.json())
 app.use(cookieParser())
 
 
+const frontendUrl = process.env.FRONTEND_URL
+    ? `https://${process.env.FRONTEND_URL.replace(/^https?:\/\//, "")}`
+    : undefined
 const allowedOrigins = [
-    process.env.FRONTEND_URL,
+    frontendUrl,
     "http://localhost:5173",
     "https://gen-ai-interviewer.vercel.app"
 ].filter(Boolean)
