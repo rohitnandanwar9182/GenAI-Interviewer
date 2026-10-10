@@ -1,6 +1,8 @@
 const express = require("express")
 const cookieParser = require("cookie-parser")
 const cors = require("cors")
+const fs = require("fs")
+const path = require("path")
 
 
 const dns = require("dns");
@@ -15,8 +17,14 @@ app.use(express.json())
 app.use(cookieParser())
 
 
+const allowedOrigins = [
+    process.env.FRONTEND_URL,
+    "http://localhost:5173",
+    "https://gen-ai-interviewer.vercel.app"
+].filter(Boolean)
+
 app.use(cors({
-    origin: ["http://localhost:5173", "https://gen-ai-interviewer.vercel.app"],
+    origin: allowedOrigins,
     credentials: true
 } ))
 
@@ -37,7 +45,15 @@ const interviewRouter = require("./routes/interview.routes")
 app.use("/api/auth", authRouter)
 app.use("/api/interview", interviewRouter)
 
+const frontendDistPath = path.resolve(__dirname, "../../Frontend/dist")
+const frontendIndexPath = path.join(frontendDistPath, "index.html")
 
+if (fs.existsSync(frontendIndexPath)) {
+    app.use(express.static(frontendDistPath))
+    app.get(/^\/(?!api(?:\/|$)).*/, (req, res) => {
+        res.sendFile(frontendIndexPath)
+    })
+}
 
 // Global error handler — without this, failures return with no useful
 // message, which is why this exact 400 has been impossible to diagnose

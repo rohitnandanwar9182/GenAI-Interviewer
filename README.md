@@ -8,7 +8,8 @@ Google's Gemini API.
 - **Backend**: Node.js, Express 5, MongoDB/Mongoose, JWT auth, Puppeteer (PDF generation)
 - **Frontend**: React 19, Vite, React Router, Sass
 
-This repo is a monorepo with two independent apps: `Backend/` and `Frontend/`.
+This repo contains the React frontend in `Frontend/` and the Express backend in `Backend/`.
+For Render production, `render.yaml` deploys them as separate services from this same repository.
 
 ---
 
@@ -70,38 +71,40 @@ JWT_SECRET=some-long-random-string
 GOOGLE_GENAI_API_KEY=your-gemini-api-key
 ```
 
-For local development, the frontend defaults to `http://localhost:3000`. In production,
-`Frontend/vercel.json` proxies `/api/*` requests through the Vercel domain to the backend.
-This keeps the authentication cookie first-party in the browser instead of relying on
-third-party cookies. The backend host must have `MONGO_URI`, `JWT_SECRET`, and
-`GOOGLE_GENAI_API_KEY` configured as environment variables. Do not commit `.env` files or
-API keys.
+For local development, the frontend calls the backend at `http://localhost:3000`. The two-service
+Render setup uses `VITE_API_URL` in the frontend build and `FRONTEND_URL` in the backend to connect
+the services; both are wired automatically by `render.yaml`. The backend needs `MONGO_URI`,
+`JWT_SECRET`, and `GOOGLE_GENAI_API_KEY`; configure these in `Backend/.env` locally and as
+environment variables on Render. Do not commit `.env` files or API keys.
 
 ## 5. Run it
 
-**Option A — one command from the root** (runs both servers together, color-coded output):
+Run both development servers with one command from the repository root:
 
 ```bash
 npm run dev
 ```
 
-**Option B — two terminals** (clearer separate logs):
+This starts the Express API at `http://localhost:3000` and Vite at `http://localhost:5173`.
+The root `npm start` command starts only Express, which serves the built frontend and API on one
+port.
 
-```bash
-# Terminal 1
-cd Backend
-npm run dev
+## Deploy frontend and backend to Render
 
-# Terminal 2
-cd Frontend
-npm run dev
-```
+The root `render.yaml` defines both Render services in this existing repository: an Express web
+service for the backend and a static site for the Vite frontend. No second repository is needed.
 
-**Option C — VS Code Tasks**: `Terminal ▸ Run Task ▸ Run All (Backend + Frontend)`.
+1. Push this repository to its existing GitHub remote.
+2. In the Render Dashboard, choose **New +** → **Blueprint** and select this repository.
+3. Provide `MONGO_URI` (for example, your MongoDB Atlas connection string), `JWT_SECRET`, and
+   `GOOGLE_GENAI_API_KEY` when Render prompts for the backend's secret environment variables.
+4. Apply the Blueprint. Render builds and deploys both services; the frontend API URL and backend
+   CORS origin are connected using Render service references.
 
-Once running:
-- Backend API: http://localhost:3000
-- Frontend app: http://localhost:5173 (Vite will print the exact URL/port)
+The frontend is configured to send API requests and credentialed cookies to the backend. The
+backend allows the deployed frontend origin, and the frontend's rewrite rule supports React
+client-side routes on refresh. Both services use Render's free plan; the backend may spin down
+when idle. Upgrade its plan in Render if always-on availability is needed.
 
 ## 6. Debugging in VS Code
 

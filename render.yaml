@@ -1,0 +1,38 @@
+services:
+  - type: web
+    name: genai-interviewer-backend
+    runtime: node
+    plan: free
+    rootDir: Backend
+    buildCommand: npm ci
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: FRONTEND_URL
+        fromService:
+          type: static
+          name: genai-interviewer-frontend
+          property: host
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: GOOGLE_GENAI_API_KEY
+        sync: false
+
+  - type: static
+    name: genai-interviewer-frontend
+    rootDir: Frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: genai-interviewer-backend
+          property: host
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
