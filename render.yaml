@@ -21,8 +21,9 @@ services:
       - key: GOOGLE_GENAI_API_KEY
         sync: false
 
-  - type: static
+  - type: web
     name: genai-interviewer-frontend
+    runtime: static
     rootDir: Frontend
     buildCommand: npm ci && npm run build
     staticPublishPath: dist
